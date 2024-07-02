@@ -7,7 +7,10 @@ import (
 
 // healthCheckHandler will be used to check the health of the application
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "status: available")
-	fmt.Fprintf(w, "env: %s\n", app.config.env)
-	fmt.Fprintf(w, "version: %s\n", version)
+	js := `{"status": "available", "env": %q, "version": %q}`
+	js = fmt.Sprintf(js, app.config.env, version)
+
+	// Only setting content type and not charset because its not required and it is recommended to not set charset as it'll be redundant
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(js))
 }
