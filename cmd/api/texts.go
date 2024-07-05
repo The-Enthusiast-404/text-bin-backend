@@ -38,7 +38,17 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	fmt.Fprintf(w, "%+v\n", input)
+	err = app.models.Texts.Insert(text)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/texts/%d", text.ID))
+	err = app.writeJSON(w, http.StatusCreated, envelope{"text": text}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // showTextHandler will be used to show a text

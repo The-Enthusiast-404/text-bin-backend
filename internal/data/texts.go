@@ -34,7 +34,14 @@ type TextModel struct {
 
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
-	return nil
+	query :=
+		`
+			INSERT INTO texts (title, content, format)
+			VALUES($1, $2, $3)
+			RETURNING id, created_at, version
+		`
+	args := []interface{}{text.Title, text.Content, text.Format}
+	return m.DB.QueryRow(query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
 }
 
 // Get will return a specific record from the texts table based on the id
