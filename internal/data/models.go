@@ -8,6 +8,7 @@ import (
 // Define a custom error type for when an expected record is not found in the database.
 var (
 	ErrRecordNotFound = errors.New("record not found")
+	ErrEditConflict   = errors.New("edit conflict")
 )
 
 // Define a Models type which wraps the MovieModel.

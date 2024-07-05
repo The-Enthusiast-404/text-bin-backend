@@ -79,11 +79,20 @@ func (m TextModel) Update(text *Text) error {
 		`
 		UPDATE texts
 		SET title = $1, content = $2, format = $3, version = version + 1
-		WHERE id = $4
+		WHERE id = $4 AND version = $5
 		RETURNING version
 	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.ID}
-	return m.DB.QueryRow(query, args...).Scan(&text.Version)
+	args := []interface{}{text.Title, text.Content, text.Format, text.ID, text.Version}
+	err := m.DB.QueryRow(query, args...).Scan(&text.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete will remove a specific record from the texts table based on the id
