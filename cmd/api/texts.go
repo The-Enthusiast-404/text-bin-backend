@@ -100,9 +100,9 @@ func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request
 
 	// Declare an input struct to hold the expected data from the request body
 	var input struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-		Format  string `json:"format"`
+		Title   *string `json:"title"`
+		Content *string `json:"content"`
+		Format  *string `json:"format"`
 	}
 
 	// Read the JSON data from the request body and store it in the input struct
@@ -112,9 +112,15 @@ func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	text.Title = input.Title
-	text.Content = input.Content
-	text.Format = input.Format
+	if input.Title != nil {
+		text.Title = *input.Title
+	}
+	if input.Content != nil {
+		text.Content = *input.Content
+	}
+	if input.Format != nil {
+		text.Format = *input.Format
+	}
 
 	v := validator.New()
 	if data.ValidateText(v, text); !v.Valid() {
