@@ -17,7 +17,7 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -33,7 +33,6 @@ func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) 
 	//passing text envelope instead of text struct
 	err = app.writeJSON(w, http.StatusOK, envelope{"text": text}, nil)
 	if err != nil {
-		app.logger.Println(err)
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
