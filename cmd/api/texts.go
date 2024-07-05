@@ -76,3 +76,62 @@ func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) 
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Read the text id parameter from the URL
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	// Fetch the existing text record from the database
+	text, err := app.models.Texts.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// Declare an input struct to hold the expected data from the request body
+	var input struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+		Format  string `json:"format"`
+	}
+
+	// Read the JSON data from the request body and store it in the input struct
+	err = app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	text.Title = input.Title
+	text.Content = input.Content
+	text.Format = input.Format
+
+	v := validator.New()
+	if data.ValidateText(v, text); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// Update the text record in the database
+	err = app.models.Texts.Update(text)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	// Return a JSON response containing the updated text record
+	err = app.writeJSON(w, http.StatusOK, envelope{"text": text}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}

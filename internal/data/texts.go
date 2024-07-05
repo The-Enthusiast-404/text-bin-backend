@@ -75,7 +75,15 @@ func (m TextModel) Get(id int64) (*Text, error) {
 
 // Update will update a specific record in the texts table based on the id
 func (m TextModel) Update(text *Text) error {
-	return nil
+	query :=
+		`
+		UPDATE texts
+		SET title = $1, content = $2, format = $3, version = version + 1
+		WHERE id = $4
+		RETURNING version
+	`
+	args := []interface{}{text.Title, text.Content, text.Format, text.ID}
+	return m.DB.QueryRow(query, args...).Scan(&text.Version)
 }
 
 // Delete will remove a specific record from the texts table based on the id

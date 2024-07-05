@@ -23,6 +23,7 @@ func (app *application) routes() *httprouter.Router {
 
 	router.HandlerFunc(http.MethodPost, "/v1/texts", app.createTextHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/texts/:id", app.showTextHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/texts/:id", app.updateTextHandler)
 
 	// return the router
 	return router
