@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expvar"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -26,6 +27,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/texts/:id", app.updateTextHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id", app.deleteTextHandler)
 
+	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
+
 	// return the router
-	return app.recoverPanic(router)
+	return app.metrics(app.recoverPanic(router))
 }
