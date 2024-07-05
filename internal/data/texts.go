@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -24,4 +25,29 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(text.Content != "", "content", "must be provided")
 	v.Check(len(text.Content) <= 1000000, "content", "must not be more than 1000000 bytes long")
 	v.Check(text.Format != "", "format", "must be provided")
+}
+
+// Define a MovieModel struct type which wraps a sql.DB connection pool.
+type TextModel struct {
+	DB *sql.DB
+}
+
+// Insert will add a new record to the texts table
+func (m TextModel) Insert(text *Text) error {
+	return nil
+}
+
+// Get will return a specific record from the texts table based on the id
+func (m TextModel) Get(id int64) (*Text, error) {
+	return nil, nil
+}
+
+// Update will update a specific record in the texts table based on the id
+func (m TextModel) Update(text *Text) error {
+	return nil
+}
+
+// Delete will remove a specific record from the texts table based on the id
+func (m TextModel) Delete(id int64) error {
+	return nil
 }
