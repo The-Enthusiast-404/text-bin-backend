@@ -30,8 +30,8 @@ func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) 
 		Format:    "golang",
 		Version:   1,
 	}
-
-	err = app.writeJSON(w, http.StatusOK, text, nil)
+	//passing text envelope instead of text struct
+	err = app.writeJSON(w, http.StatusOK, envelope{"text": text}, nil)
 	if err != nil {
 		app.logger.Println(err)
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
