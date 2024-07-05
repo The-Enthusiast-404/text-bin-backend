@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/data"
+	"dev.theenthusiast.text-bin/internal/validator"
 )
 
 // createTextHandler will be used to create a text
@@ -18,8 +19,23 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 		Format  string `json:"format"`
 	}
 	err := app.readJSON(w, r, &input)
+
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	text := &data.Text{
+		Title:   input.Title,
+		Content: input.Content,
+		Format:  input.Format,
+	}
+
+	// initialize a new validator instance
+	v := validator.New()
+
+	if data.ValidateText(v, text); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 	fmt.Fprintf(w, "%+v\n", input)
