@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -46,7 +47,30 @@ func (m TextModel) Insert(text *Text) error {
 
 // Get will return a specific record from the texts table based on the id
 func (m TextModel) Get(id int64) (*Text, error) {
-	return nil, nil
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	query :=
+		`
+		SELECT id, created_at, title, content, format, version
+		FROM texts
+		WHERE id = $1
+	`
+
+	// declare a text variable to hold the data from the query
+	var text Text
+	err := m.DB.QueryRow(query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Version)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &text, nil
+
 }
 
 // Update will update a specific record in the texts table based on the id

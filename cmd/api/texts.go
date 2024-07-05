@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"dev.theenthusiast.text-bin/internal/data"
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -59,15 +59,17 @@ func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// creating a static text instance to insert into the database
-	text := data.Text{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Title:     "Golang snippet",
-		Content:   "This is a Golang snippet",
-		Format:    "golang",
-		Version:   1,
+	text, err := app.models.Texts.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
+
 	//passing text envelope instead of text struct
 	err = app.writeJSON(w, http.StatusOK, envelope{"text": text}, nil)
 	if err != nil {
