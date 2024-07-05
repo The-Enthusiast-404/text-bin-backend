@@ -45,7 +45,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	dsn := os.Getenv("DSN")
+	// dsn := os.Getenv("DSN")
 
 	// instance of config struct
 	var cfg config
@@ -53,7 +53,7 @@ func main() {
 	// reading configuration settings from command line flags
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "dsn", dsn, "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "dsn", "", "PostgreSQL DSN")
 
 	// Read the connection pool settings from command-line flags into the config struct.
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -77,18 +77,18 @@ func main() {
 	expvar.NewString("version").Set(version)
 
 	expvar.Publish("goroutines", expvar.Func(func() interface{} {
-        return runtime.NumGoroutine()
-    }))
+		return runtime.NumGoroutine()
+	}))
 
-    // Publish the database connection pool statistics.
-    expvar.Publish("database", expvar.Func(func() interface{} {
-        return db.Stats()
-    }))
+	// Publish the database connection pool statistics.
+	expvar.Publish("database", expvar.Func(func() interface{} {
+		return db.Stats()
+	}))
 
-    // Publish the current Unix timestamp.
-    expvar.Publish("timestamp", expvar.Func(func() interface{} {
-        return time.Now().Unix()
-    }))
+	// Publish the current Unix timestamp.
+	expvar.Publish("timestamp", expvar.Func(func() interface{} {
+		return time.Now().Unix()
+	}))
 
 	app := &application{
 		config: cfg,
