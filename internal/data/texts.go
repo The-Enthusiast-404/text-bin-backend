@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -42,7 +43,10 @@ func (m TextModel) Insert(text *Text) error {
 			RETURNING id, created_at, version
 		`
 	args := []interface{}{text.Title, text.Content, text.Format}
-	return m.DB.QueryRow(query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
 }
 
 // Get will return a specific record from the texts table based on the id
@@ -59,7 +63,11 @@ func (m TextModel) Get(id int64) (*Text, error) {
 
 	// declare a text variable to hold the data from the query
 	var text Text
-	err := m.DB.QueryRow(query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Version)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Version)
 
 	if err != nil {
 		switch {
@@ -83,7 +91,9 @@ func (m TextModel) Update(text *Text) error {
 		RETURNING version
 	`
 	args := []interface{}{text.Title, text.Content, text.Format, text.ID, text.Version}
-	err := m.DB.QueryRow(query, args...).Scan(&text.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -105,7 +115,9 @@ func (m TextModel) Delete(id int64) error {
 		DELETE FROM texts
 		WHERE id = $1
 	`
-	result, err := m.DB.Exec(query, id)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	result, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
