@@ -88,5 +88,24 @@ func (m TextModel) Update(text *Text) error {
 
 // Delete will remove a specific record from the texts table based on the id
 func (m TextModel) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+	query :=
+		`
+		DELETE FROM texts
+		WHERE id = $1
+	`
+	result, err := m.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
 	return nil
 }
