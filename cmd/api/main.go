@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -16,8 +17,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// Version of the app
-const version = "1.0.0"
+var (
+	buildTime string
+	version   string
+)
 
 // Config struct will be used to hold all the configuration settings of the application
 type config struct {
@@ -60,7 +63,18 @@ func main() {
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 
+	// Create a new version boolean flag with the default value of false.
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+
+	// If the version flag value is true, then print out the version number and
+	// immediately exit.
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		fmt.Printf("Build time:\t%s\n", buildTime)
+		os.Exit(0)
+	}
 
 	// instance of logger
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
