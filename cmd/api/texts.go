@@ -30,24 +30,12 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 
 	// Calculate the expiration time based on the ExpiresValue and ExpiresUnit
 	var expires time.Time
-	switch input.ExpiresUnit {
-	case "seconds":
-		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Second)
-	case "minutes":
-		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Minute)
-	case "hours":
-		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour)
-	case "days":
-		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour * 24)
-	case "weeks":
-		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour * 24 * 7)
-	case "months":
-		expires = time.Now().AddDate(0, input.ExpiresValue, 0)
-	case "years":
-		expires = time.Now().AddDate(input.ExpiresValue, 0, 0)
-	default:
-		app.badRequestResponse(w, r, fmt.Errorf("invalid expires unit: %v", input.ExpiresUnit))
-		return
+	if input.ExpiresUnit != "" && input.ExpiresValue != 0 {
+		expires, err = app.expirationTime(input.ExpiresValue, input.ExpiresUnit)
+		if err != nil {
+			app.badRequestResponse(w, r, err)
+			return
+		}
 	}
 
 	// Create a new Text struct and populate it with the input data.
@@ -157,23 +145,9 @@ func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request
 		text.Format = *input.Format
 	}
 	if input.ExpiresUnit != nil && input.ExpiresValue != nil {
-		switch *input.ExpiresUnit {
-		case "seconds":
-			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Second)
-		case "minutes":
-			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Minute)
-		case "hours":
-			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour)
-		case "days":
-			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour * 24)
-		case "weeks":
-			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour * 24 * 7)
-		case "months":
-			text.Expires = time.Now().AddDate(0, *input.ExpiresValue, 0)
-		case "years":
-			text.Expires = time.Now().AddDate(*input.ExpiresValue, 0, 0)
-		default:
-			app.badRequestResponse(w, r, fmt.Errorf("invalid expires unit: %v", *input.ExpiresUnit))
+		text.Expires, err = app.expirationTime(*input.ExpiresValue, *input.ExpiresUnit)
+		if err != nil {
+			app.badRequestResponse(w, r, err)
 			return
 		}
 	}
