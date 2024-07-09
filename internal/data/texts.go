@@ -74,13 +74,13 @@ func (m TextModel) Insert(text *Text) error {
 }
 
 // Get will return a specific record from the texts table based on the id
-func (m TextModel) Get(id int64) (*Text, error) {
-	if id < 1 {
+func (m TextModel) Get(id string) (*Text, error) {
+	if id == "" {
 		return nil, ErrRecordNotFound
 	}
 	query :=
 		`
-		SELECT id, created_at, title, content, format, expires, version
+		SELECT id, created_at, title, content, format, expires, slug, version
 		FROM texts
 		WHERE id = $1
 	`
@@ -91,7 +91,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Slug, &text.Version)
 
 	if err != nil {
 		switch {
@@ -130,8 +130,8 @@ func (m TextModel) Update(text *Text) error {
 }
 
 // Delete will remove a specific record from the texts table based on the id
-func (m TextModel) Delete(id int64) error {
-	if id < 1 {
+func (m TextModel) Delete(id string) error {
+	if id == "" {
 		return ErrRecordNotFound
 	}
 	query :=
