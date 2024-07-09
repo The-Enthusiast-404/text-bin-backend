@@ -112,7 +112,6 @@ func (app *application) showTextHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request) {
-
 	// Read the text id parameter from the URL
 	id, err := app.readIDParam(r)
 	if err != nil {
@@ -134,9 +133,11 @@ func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request
 
 	// Declare an input struct to hold the expected data from the request body
 	var input struct {
-		Title   *string `json:"title"`
-		Content *string `json:"content"`
-		Format  *string `json:"format"`
+		Title        *string `json:"title"`
+		Content      *string `json:"content"`
+		Format       *string `json:"format"`
+		ExpiresUnit  *string `json:"expiresUnit"`
+		ExpiresValue *int    `json:"expiresValue"`
 	}
 
 	// Read the JSON data from the request body and store it in the input struct
@@ -155,7 +156,29 @@ func (app *application) updateTextHandler(w http.ResponseWriter, r *http.Request
 	if input.Format != nil {
 		text.Format = *input.Format
 	}
+	if input.ExpiresUnit != nil && input.ExpiresValue != nil {
+		switch *input.ExpiresUnit {
+		case "seconds":
+			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Second)
+		case "minutes":
+			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Minute)
+		case "hours":
+			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour)
+		case "days":
+			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour * 24)
+		case "weeks":
+			text.Expires = time.Now().Add(time.Duration(*input.ExpiresValue) * time.Hour * 24 * 7)
+		case "months":
+			text.Expires = time.Now().AddDate(0, *input.ExpiresValue, 0)
+		case "years":
+			text.Expires = time.Now().AddDate(*input.ExpiresValue, 0, 0)
+		default:
+			app.badRequestResponse(w, r, fmt.Errorf("invalid expires unit: %v", *input.ExpiresUnit))
+			return
+		}
+	}
 
+	// Initialize a new validator instance and validate the text
 	v := validator.New()
 	if data.ValidateText(v, text); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)

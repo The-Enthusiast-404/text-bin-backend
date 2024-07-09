@@ -88,11 +88,11 @@ func (m TextModel) Update(text *Text) error {
 	query :=
 		`
 		UPDATE texts
-		SET title = $1, content = $2, format = $3, version = version + 1
-		WHERE id = $4 AND version = $5
+		SET title = $1, content = $2, format = $3,expires = $4, version = version + 1
+		WHERE id = $5 AND version = $6
 		RETURNING version
 	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.ID, text.Version}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.ID, text.Version}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)
