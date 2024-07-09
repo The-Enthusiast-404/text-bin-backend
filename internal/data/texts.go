@@ -2,7 +2,9 @@ package data
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"time"
 
@@ -19,6 +21,7 @@ type Text struct {
 	Format    string    `json:"format"`
 	Version   int32     `json:"version"`
 	Expires   time.Time `json:"expires"`
+	Slug      string    `json:"slug"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -31,6 +34,16 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
 }
 
+// GenerateRandomCode generates a random string of specified length
+func GenerateRandomCode(n int) (string, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
 // Define a MovieModel struct type which wraps a sql.DB connection pool.
 type TextModel struct {
 	DB *sql.DB
@@ -38,29 +51,37 @@ type TextModel struct {
 
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
+	slug, err := GenerateRandomCode(8)
+	if err != nil {
+		return err
+	}
 	query :=
 		`
-			INSERT INTO texts (title, content, format, expires)
-			VALUES($1, $2, $3, $4)
-			RETURNING id, created_at, version
+			INSERT INTO texts (title, content, format, expires, slug)
+			VALUES($1, $2, $3, $4, $5)
+			RETURNING id, slug, created_at, version
 		`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, slug}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	return m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
+	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.Slug, &text.CreatedAt, &text.Version)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Get will return a specific record from the texts table based on the id
-func (m TextModel) Get(id int64) (*Text, error) {
-	if id < 1 {
+func (m TextModel) Get(slug string) (*Text, error) {
+	if slug == "" {
 		return nil, ErrRecordNotFound
 	}
 	query :=
 		`
-		SELECT id, created_at, title, content, format, expires, version
+		SELECT id, created_at, title, content, format, expires, slug, version
 		FROM texts
-		WHERE id = $1
+		WHERE slug = $1
 	`
 
 	// declare a text variable to hold the data from the query
@@ -69,7 +90,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, slug).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Slug, &text.Version)
 
 	if err != nil {
 		switch {
@@ -89,10 +110,10 @@ func (m TextModel) Update(text *Text) error {
 		`
 		UPDATE texts
 		SET title = $1, content = $2, format = $3,expires = $4, version = version + 1
-		WHERE id = $5 AND version = $6
+		WHERE slug = $5 AND version = $6
 		RETURNING version
 	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.ID, text.Version}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.Version}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)
@@ -108,14 +129,14 @@ func (m TextModel) Update(text *Text) error {
 }
 
 // Delete will remove a specific record from the texts table based on the id
-func (m TextModel) Delete(id int64) error {
-	if id < 1 {
+func (m TextModel) Delete(id string) error {
+	if id == "" {
 		return ErrRecordNotFound
 	}
 	query :=
 		`
 		DELETE FROM texts
-		WHERE id = $1
+		WHERE slug = $1
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
