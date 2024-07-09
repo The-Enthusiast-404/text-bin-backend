@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"dev.theenthusiast.text-bin/internal/data"
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -11,40 +12,73 @@ import (
 
 // createTextHandler will be used to create a text
 func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request) {
-	// declare a anonymous struct to hold the input data that we expect to get from the request body (the field names are subset of the Text struct)
-	// This struct will be the target decode destination for the JSON decoder
+	// Declare an anonymous struct to hold the input data that we expect to get from the request body.
 	var input struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-		Format  string `json:"format"`
+		Title        string `json:"title"`
+		Content      string `json:"content"`
+		Format       string `json:"format"`
+		ExpiresValue int    `json:"expiresValue"`
+		ExpiresUnit  string `json:"expiresUnit"`
 	}
-	err := app.readJSON(w, r, &input)
 
+	// Decode the JSON request body into the input struct.
+	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
+	// Calculate the expiration time based on the ExpiresValue and ExpiresUnit
+	var expires time.Time
+	switch input.ExpiresUnit {
+	case "seconds":
+		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Second)
+	case "minutes":
+		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Minute)
+	case "hours":
+		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour)
+	case "days":
+		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour * 24)
+	case "weeks":
+		expires = time.Now().Add(time.Duration(input.ExpiresValue) * time.Hour * 24 * 7)
+	case "months":
+		expires = time.Now().AddDate(0, input.ExpiresValue, 0)
+	case "years":
+		expires = time.Now().AddDate(input.ExpiresValue, 0, 0)
+	default:
+		app.badRequestResponse(w, r, fmt.Errorf("invalid expires unit: %v", input.ExpiresUnit))
+		return
+	}
+
+	// Create a new Text struct and populate it with the input data.
 	text := &data.Text{
 		Title:   input.Title,
 		Content: input.Content,
 		Format:  input.Format,
+		Expires: expires,
 	}
 
-	// initialize a new validator instance
+	// Initialize a new validator instance.
 	v := validator.New()
 
+	// Validate the text struct.
 	if data.ValidateText(v, text); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
+
+	// Insert the text into the database.
 	err = app.models.Texts.Insert(text)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+
+	// Set the Location header for the newly created resource.
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/v1/texts/%d", text.ID))
+
+	// Write the JSON response with the created text.
 	err = app.writeJSON(w, http.StatusCreated, envelope{"text": text}, headers)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

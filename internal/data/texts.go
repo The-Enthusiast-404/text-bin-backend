@@ -18,6 +18,7 @@ type Text struct {
 	Content   string    `json:"content"`
 	Format    string    `json:"format"`
 	Version   int32     `json:"version"`
+	Expires   time.Time `json:"expires"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -27,6 +28,7 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(text.Content != "", "content", "must be provided")
 	v.Check(len(text.Content) <= 1000000, "content", "must not be more than 1000000 bytes long")
 	v.Check(text.Format != "", "format", "must be provided")
+	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
 }
 
 // Define a MovieModel struct type which wraps a sql.DB connection pool.
@@ -38,11 +40,11 @@ type TextModel struct {
 func (m TextModel) Insert(text *Text) error {
 	query :=
 		`
-			INSERT INTO texts (title, content, format)
-			VALUES($1, $2, $3)
+			INSERT INTO texts (title, content, format, expires)
+			VALUES($1, $2, $3, $4)
 			RETURNING id, created_at, version
 		`
-	args := []interface{}{text.Title, text.Content, text.Format}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
