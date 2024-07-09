@@ -58,7 +58,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	}
 	query :=
 		`
-		SELECT id, created_at, title, content, format, version
+		SELECT id, created_at, title, content, format, expires, version
 		FROM texts
 		WHERE id = $1
 	`
@@ -69,7 +69,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Version)
 
 	if err != nil {
 		switch {
