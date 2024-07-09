@@ -59,30 +59,29 @@ func (m TextModel) Insert(text *Text) error {
 		`
 			INSERT INTO texts (title, content, format, expires, slug)
 			VALUES($1, $2, $3, $4, $5)
-			RETURNING id, created_at, version
+			RETURNING id, slug, created_at, version
 		`
 	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, slug}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
+	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.Slug, &text.CreatedAt, &text.Version)
 	if err != nil {
 		return err
 	}
-	text.Slug = slug
 	return nil
 }
 
 // Get will return a specific record from the texts table based on the id
-func (m TextModel) Get(id string) (*Text, error) {
-	if id == "" {
+func (m TextModel) Get(slug string) (*Text, error) {
+	if slug == "" {
 		return nil, ErrRecordNotFound
 	}
 	query :=
 		`
 		SELECT id, created_at, title, content, format, expires, slug, version
 		FROM texts
-		WHERE id = $1
+		WHERE slug = $1
 	`
 
 	// declare a text variable to hold the data from the query
@@ -91,7 +90,7 @@ func (m TextModel) Get(id string) (*Text, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Slug, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, slug).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Slug, &text.Version)
 
 	if err != nil {
 		switch {
@@ -111,10 +110,10 @@ func (m TextModel) Update(text *Text) error {
 		`
 		UPDATE texts
 		SET title = $1, content = $2, format = $3,expires = $4, version = version + 1
-		WHERE id = $5 AND version = $6
+		WHERE slug = $5 AND version = $6
 		RETURNING version
 	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.ID, text.Version}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.Version}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)
@@ -137,7 +136,7 @@ func (m TextModel) Delete(id string) error {
 	query :=
 		`
 		DELETE FROM texts
-		WHERE id = $1
+		WHERE slug = $1
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()

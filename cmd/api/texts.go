@@ -64,7 +64,7 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 
 	// Set the Location header for the newly created resource.
 	headers := make(http.Header)
-	headers.Set("Location", fmt.Sprintf("/v1/texts/%d", text.ID))
+	headers.Set("Location", fmt.Sprintf("/v1/texts/%s", text.Slug))
 
 	// Write the JSON response with the created text.
 	err = app.writeJSON(w, http.StatusCreated, envelope{"text": text}, headers)
