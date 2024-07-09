@@ -18,6 +18,7 @@ type Text struct {
 	Content   string    `json:"content"`
 	Format    string    `json:"format"`
 	Version   int32     `json:"version"`
+	Expires   time.Time `json:"expires"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -27,6 +28,7 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(text.Content != "", "content", "must be provided")
 	v.Check(len(text.Content) <= 1000000, "content", "must not be more than 1000000 bytes long")
 	v.Check(text.Format != "", "format", "must be provided")
+	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
 }
 
 // Define a MovieModel struct type which wraps a sql.DB connection pool.
@@ -38,11 +40,11 @@ type TextModel struct {
 func (m TextModel) Insert(text *Text) error {
 	query :=
 		`
-			INSERT INTO texts (title, content, format)
-			VALUES($1, $2, $3)
+			INSERT INTO texts (title, content, format, expires)
+			VALUES($1, $2, $3, $4)
 			RETURNING id, created_at, version
 		`
-	args := []interface{}{text.Title, text.Content, text.Format}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
@@ -56,7 +58,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	}
 	query :=
 		`
-		SELECT id, created_at, title, content, format, version
+		SELECT id, created_at, title, content, format, expires, version
 		FROM texts
 		WHERE id = $1
 	`
@@ -67,7 +69,7 @@ func (m TextModel) Get(id int64) (*Text, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Version)
 
 	if err != nil {
 		switch {
@@ -86,11 +88,11 @@ func (m TextModel) Update(text *Text) error {
 	query :=
 		`
 		UPDATE texts
-		SET title = $1, content = $2, format = $3, version = version + 1
-		WHERE id = $4 AND version = $5
+		SET title = $1, content = $2, format = $3,expires = $4, version = version + 1
+		WHERE id = $5 AND version = $6
 		RETURNING version
 	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.ID, text.Version}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.ID, text.Version}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)

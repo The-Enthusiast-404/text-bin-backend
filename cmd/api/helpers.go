@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -92,4 +93,28 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 		return errors.New("body must only contain a single JSON value")
 	}
 	return nil
+}
+
+// expirationTime calculates the expiration time based on the expiresValue and expiresUnit
+func (app *application) expirationTime(expiresValue int, expiresUnit string) (time.Time, error) {
+	now := time.Now()
+
+	switch expiresUnit {
+	case "seconds":
+		return now.Add(time.Duration(expiresValue) * time.Second), nil
+	case "minutes":
+		return now.Add(time.Duration(expiresValue) * time.Minute), nil
+	case "hours":
+		return now.Add(time.Duration(expiresValue) * time.Hour), nil
+	case "days":
+		return now.Add(time.Duration(expiresValue) * time.Hour * 24), nil
+	case "weeks":
+		return now.Add(time.Duration(expiresValue) * time.Hour * 24 * 7), nil
+	case "months":
+		return now.AddDate(0, expiresValue, 0), nil
+	case "years":
+		return now.AddDate(expiresValue, 0, 0), nil
+	default:
+		return time.Time{}, fmt.Errorf("invalid expires unit: %s", expiresUnit)
+	}
 }
