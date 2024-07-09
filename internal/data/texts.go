@@ -2,7 +2,9 @@ package data
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"time"
 
@@ -19,6 +21,7 @@ type Text struct {
 	Format    string    `json:"format"`
 	Version   int32     `json:"version"`
 	Expires   time.Time `json:"expires"`
+	Slug      string    `json:"slug"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -31,6 +34,16 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
 }
 
+// GenerateRandomCode generates a random string of specified length
+func GenerateRandomCode(n int) (string, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
 // Define a MovieModel struct type which wraps a sql.DB connection pool.
 type TextModel struct {
 	DB *sql.DB
@@ -38,17 +51,26 @@ type TextModel struct {
 
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
+	slug, err := GenerateRandomCode(8)
+	if err != nil {
+		return err
+	}
 	query :=
 		`
-			INSERT INTO texts (title, content, format, expires)
-			VALUES($1, $2, $3, $4)
+			INSERT INTO texts (title, content, format, expires, slug)
+			VALUES($1, $2, $3, $4, $5)
 			RETURNING id, created_at, version
 		`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, slug}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	return m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
+	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
+	if err != nil {
+		return err
+	}
+	text.Slug = slug
+	return nil
 }
 
 // Get will return a specific record from the texts table based on the id

@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS texts (
     content text NOT NULL,
     format text NOT NULL DEFAULT 'plaintext',
     expires timestamp(0) with time zone,
+    slug text NOT NULL UNIQUE,
     version integer NOT NULL DEFAULT 1
 );
