@@ -87,7 +87,7 @@ build/api:
 # PRODUCTION
 # ==================================================================================== #
 
-production_host_ip = '142.93.222.185'
+production_host_ip = '64.227.180.23'
 
 ## production/connect: connect to the production server
 .PHONY: production/connect
@@ -101,7 +101,7 @@ production/deploy/api:
 	rsync -rP --delete ./migrations textbin@${production_host_ip}:~
 	rsync -P ./remote/production/api.service textbin@${production_host_ip}:~
 	rsync -P ./remote/production/Caddyfile textbin@${production_host_ip}:~
-	ssh -t greenlight@${production_host_ip} '\
+	ssh -t textbin@${production_host_ip} '\
 		migrate -path ~/migrations -database $$DSN up \
         && sudo mv ~/api.service /etc/systemd/system/ \
         && sudo systemctl enable api \
@@ -110,7 +110,7 @@ production/deploy/api:
         && sudo systemctl reload caddy \
       '
 
-“## production/configure/caddyfile: configure the production Caddyfile
+## production/configure/caddyfile: configure the production Caddyfile
 .PHONY: production/configure/caddyfile
 production/configure/caddyfile:
 	rsync -P ./remote/production/Caddyfile textbin@${production_host_ip}:~
