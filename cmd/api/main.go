@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/data"
 	"dev.theenthusiast.text-bin/internal/jsonlog"
+	"dev.theenthusiast.text-bin/internal/mailer"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -31,6 +33,13 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime  string
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 // Application struct will be used to hold all the dependencies of the application
@@ -38,6 +47,8 @@ type application struct {
 	config config
 	logger *jsonlog.Logger
 	models data.Models
+	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -49,6 +60,13 @@ func main() {
 	}
 
 	// dsn := os.Getenv("DSN")
+	smtp_host := os.Getenv("SMTP_HOST")
+	// smtp_port, err := strconv.ParseInt(os.Getenv("SMTP_PORT"), 10, 32)
+	if err != nil {
+		fmt.Println("Error parsing SMTP_PORT")
+	}
+	smtp_username := os.Getenv("SMTP_USERNAME")
+	smtp_password := os.Getenv("SMTP_PASSWORD")
 
 	// instance of config struct
 	var cfg config
@@ -62,6 +80,12 @@ func main() {
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
+
+	flag.StringVar(&cfg.smtp.host, "smtp-host", smtp_host, "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", smtp_username, "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", smtp_password, "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "TextBin <no-reply@textbin.theenthusiast.dev>", "SMTP sender")
 
 	// Create a new version boolean flag with the default value of false.
 	displayVersion := flag.Bool("version", false, "Display version and exit")
@@ -108,6 +132,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()
