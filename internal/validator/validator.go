@@ -46,7 +46,7 @@ func (v *Validator) In(value string, values ...string) bool {
 }
 
 // Matches function will be used to check if the given value matches the regular expression or not (if it does not match then add an error message to the validation errors map)
-func (v *Validator) Matches(value string, rx *regexp.Regexp) bool {
+func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
 

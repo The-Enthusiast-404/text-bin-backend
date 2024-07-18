@@ -27,6 +27,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/texts/:id", app.updateTextHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id", app.deleteTextHandler)
 
+	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
+
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
 	// return the router
