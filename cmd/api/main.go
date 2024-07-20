@@ -82,10 +82,10 @@ func main() {
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 
 	flag.StringVar(&cfg.smtp.host, "smtp-host", smtp_host, "SMTP host")
-	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", smtp_username, "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", smtp_password, "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "TextBin <no-reply@textbin.theenthusiast.dev>", "SMTP sender")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "TextBin <mailtrap@theenthusiast.dev>", "SMTP sender")
 
 	// Create a new version boolean flag with the default value of false.
 	displayVersion := flag.Bool("version", false, "Display version and exit")
