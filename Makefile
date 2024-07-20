@@ -1,8 +1,8 @@
-# Load environment variables from .env file
-ifneq (,$(wildcard .env))
-    include .env
-    export $(shell sed 's/=.*//' .env)
-endif
+# # Load environment variables from .env file
+# ifneq (,$(wildcard .env))
+#     include .env
+#     export $(shell sed 's/=.*//' .env)
+# endif
 
 # Load environment variables from .envrc file
 ifneq (,$(wildcard .envrc))
