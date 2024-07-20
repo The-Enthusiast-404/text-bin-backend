@@ -4,6 +4,12 @@ ifneq (,$(wildcard .env))
     export $(shell sed 's/=.*//' .env)
 endif
 
+# Load environment variables from .envrc file
+ifneq (,$(wildcard .envrc))
+    include .envrc
+    export $(shell sed 's/=.*//' .envrc)
+endif
+
 # ==================================================================================== #
 # HELPERS
 # ==================================================================================== #
