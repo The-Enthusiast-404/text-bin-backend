@@ -53,3 +53,14 @@ func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Requ
 	message := "Unable to update the record due to an edit conflict, please try again"
 	app.errorResponse(w, r, http.StatusConflict, message)
 }
+
+func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
+	message := "Invalid authentication credentials"
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}
+
+func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	message := "Invalid or missing authentication token"
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}

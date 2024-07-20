@@ -27,8 +27,13 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/texts/:id", app.updateTextHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id", app.deleteTextHandler)
 
+	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
+
+	router.HandlerFunc(http.MethodPost, "/v1/users/authentication", app.createAuthenticationTokenHandler)
+
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
 	// return the router
-	return app.enableCORS((app.metrics(app.recoverPanic(router))))
+	return app.enableCORS((app.metrics(app.recoverPanic(app.authenticate(router)))))
 }

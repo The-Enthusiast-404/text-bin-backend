@@ -13,12 +13,16 @@ var (
 
 // Define a Models type which wraps the MovieModel.
 type Models struct {
-	Texts TextModel
+	Texts  TextModel
+	Users  UserModel
+	Tokens TokenModel
 }
 
 // Define a NewModels() function which initializes the MovieModel and stores it in the Models type.
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Texts: TextModel{DB: db},
+		Texts:  TextModel{DB: db},
+		Users:  UserModel{DB: db},
+		Tokens: TokenModel{DB: db},
 	}
 }
