@@ -14,7 +14,6 @@ import (
 	"dev.theenthusiast.text-bin/internal/data"
 	"dev.theenthusiast.text-bin/internal/jsonlog"
 	"dev.theenthusiast.text-bin/internal/mailer"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -52,39 +51,23 @@ type application struct {
 }
 
 func main() {
-
-	err := godotenv.Load()
-	if err != nil {
-		// log.Fatal("Error loading .env file")
-		fmt.Println("Error loading .env file")
-	}
-
-	// dsn := os.Getenv("DSN")
-	smtp_host := os.Getenv("SMTP_HOST")
-	// smtp_port, err := strconv.ParseInt(os.Getenv("SMTP_PORT"), 10, 32)
-	if err != nil {
-		fmt.Println("Error parsing SMTP_PORT")
-	}
-	smtp_username := os.Getenv("SMTP_USERNAME")
-	smtp_password := os.Getenv("SMTP_PASSWORD")
-
 	// instance of config struct
 	var cfg config
 
 	// reading configuration settings from command line flags
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "dsn", "", "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("DSN"), "PostgreSQL DSN")
 
 	// Read the connection pool settings from command-line flags into the config struct.
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 
-	flag.StringVar(&cfg.smtp.host, "smtp-host", smtp_host, "SMTP host")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", os.Getenv("SMTP_HOST"), "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", smtp_username, "SMTP username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", smtp_password, "SMTP password")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "TextBin <mailtrap@theenthusiast.dev>", "SMTP sender")
 
 	// Create a new version boolean flag with the default value of false.
