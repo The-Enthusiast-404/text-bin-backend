@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,18 @@ func (app *application) readIDParam(r *http.Request) (string, error) {
 		return "", errors.New("invalid id parameter")
 	}
 	return id, nil
+}
+
+func (app *application) readIntParam(r *http.Request, param string) (int64, error) {
+    params := httprouter.ParamsFromContext(r.Context())
+    id := params.ByName(param)
+
+    idInt, err := strconv.ParseInt(id, 10, 64)
+    if err != nil || idInt < 1 {
+        return 0, fmt.Errorf("invalid %s parameter", param)
+    }
+
+    return idInt, nil
 }
 
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {

@@ -14,14 +14,16 @@ import (
 // Its important in Go to keep the Fields of a struct in Capotal letter to make it public
 // Any field that starts with a lowercase letter is private to the package and aren't  exported and won't be included when encoding a struct to JSON
 type Text struct {
-	ID        int64     `json:"id"`
-	CreatedAt time.Time `json:"-"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Format    string    `json:"format"`
-	Version   int32     `json:"version"`
-	Expires   time.Time `json:"expires"`
-	Slug      string    `json:"slug"`
+	ID         int64     `json:"id"`
+	CreatedAt  time.Time `json:"-"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	Format     string    `json:"format"`
+	Version    int32     `json:"version"`
+	Expires    time.Time `json:"expires"`
+	Slug       string    `json:"slug"`
+	LikesCount int       `json:"likes_count"`
+	Comments   []Comment `json:"comments,omitempty"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -32,6 +34,7 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(len(text.Content) <= 1000000, "content", "must not be more than 1000000 bytes long")
 	v.Check(text.Format != "", "format", "must be provided")
 	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
+
 }
 
 // GenerateRandomCode generates a random string of specified length
@@ -74,23 +77,20 @@ func (m TextModel) Insert(text *Text) error {
 
 // Get will return a specific record from the texts table based on the id
 func (m TextModel) Get(slug string) (*Text, error) {
-	if slug == "" {
-		return nil, ErrRecordNotFound
-	}
-	query :=
-		`
-		SELECT id, created_at, title, content, format, expires, slug, version
-		FROM texts
-		WHERE slug = $1
-	`
+	query := `
+        SELECT t.id, t.created_at, t.title, t.content, t.format, t.expires, t.slug, t.version,
+               (SELECT COUNT(*) FROM likes WHERE text_id = t.id) as likes_count
+        FROM texts t
+        WHERE slug = $1`
 
-	// declare a text variable to hold the data from the query
 	var text Text
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, slug).Scan(&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format, &text.Expires, &text.Slug, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, slug).Scan(
+		&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format,
+		&text.Expires, &text.Slug, &text.Version, &text.LikesCount)
 
 	if err != nil {
 		switch {
@@ -100,8 +100,34 @@ func (m TextModel) Get(slug string) (*Text, error) {
 			return nil, err
 		}
 	}
-	return &text, nil
 
+	// Fetch comments
+	commentsQuery := `
+        SELECT id, user_id, content, created_at, updated_at
+        FROM comments
+        WHERE text_id = $1
+        ORDER BY created_at DESC`
+
+	rows, err := m.DB.QueryContext(ctx, commentsQuery, text.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var comment Comment
+		err := rows.Scan(&comment.ID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		text.Comments = append(text.Comments, comment)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &text, nil
 }
 
 // Update will update a specific record in the texts table based on the id
