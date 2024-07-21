@@ -32,6 +32,11 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/users/authentication", app.createAuthenticationTokenHandler)
 
+	router.HandlerFunc(http.MethodPost, "/v1/texts/:id/like", app.addLikeHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id/like", app.removeLikeHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/texts/:id/comments", app.addCommentHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id/comments/:commentID", app.deleteCommentHandler)
+
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
 	// return the router
