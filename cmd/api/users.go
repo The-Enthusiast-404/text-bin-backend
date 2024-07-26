@@ -147,6 +147,7 @@ func (app *application) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
 	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
 		switch {
@@ -157,6 +158,7 @@ func (app *application) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

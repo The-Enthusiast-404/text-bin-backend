@@ -19,6 +19,8 @@ type User struct {
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
 	Version   int       `json:"-"`
+	Texts     []Text    `json:"texts,omitempty"`
+	Comments  []Comment `json:"comments,omitempty"`
 }
 
 type password struct {
@@ -123,9 +125,9 @@ func (m UserModel) Insert(user *User) error {
 
 func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
-		SELECT id, created_at, name, email, password_hash, activated, version
-		FROM users
-		WHERE email = $1`
+        SELECT id, created_at, name, email, password_hash, activated, version
+        FROM users
+        WHERE email = $1`
 
 	var user User
 
@@ -149,6 +151,64 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 			return nil, err
 		}
 	}
+
+	// Fetch texts for the user
+	textsQuery := `
+        SELECT id, created_at, title, content, format, expires, slug, version
+        FROM texts
+        WHERE user_id = $1`
+
+	textsRows, err := m.DB.QueryContext(ctx, textsQuery, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer textsRows.Close()
+
+	for textsRows.Next() {
+		var text Text
+		err := textsRows.Scan(
+			&text.ID,
+			&text.CreatedAt,
+			&text.Title,
+			&text.Content,
+			&text.Format,
+			&text.Expires,
+			&text.Slug,
+			&text.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+		user.Texts = append(user.Texts, text)
+	}
+
+	// Fetch comments for the user
+	commentsQuery := `
+        SELECT id, text_id, content, created_at, updated_at
+        FROM comments
+        WHERE user_id = $1`
+
+	commentsRows, err := m.DB.QueryContext(ctx, commentsQuery, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer commentsRows.Close()
+
+	for commentsRows.Next() {
+		var comment Comment
+		err := commentsRows.Scan(
+			&comment.ID,
+			&comment.TextID,
+			&comment.Content,
+			&comment.CreatedAt,
+			&comment.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		user.Comments = append(user.Comments, comment)
+	}
+
 	return &user, nil
 }
 
