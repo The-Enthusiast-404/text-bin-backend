@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -24,6 +25,7 @@ type Text struct {
 	Slug       string    `json:"slug"`
 	LikesCount int       `json:"likes_count"`
 	Comments   []Comment `json:"comments,omitempty"`
+	UserID     int64     `json:"user_id,omitempty"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -54,23 +56,19 @@ type TextModel struct {
 
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
-	slug, err := GenerateRandomCode(8)
-	if err != nil {
-		return err
-	}
 	query :=
 		`
-			INSERT INTO texts (title, content, format, expires, slug)
-			VALUES($1, $2, $3, $4, $5)
-			RETURNING id, slug, created_at, version
-		`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, slug}
+        INSERT INTO texts (title, content, format, expires, slug, user_id)
+        VALUES($1, $2, $3, $4, $5, $6)
+        RETURNING id, created_at, version
+        `
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.UserID}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.Slug, &text.CreatedAt, &text.Version)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert text: %v", err)
 	}
 	return nil
 }

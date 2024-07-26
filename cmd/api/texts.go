@@ -38,13 +38,22 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Create a new Text struct and populate it with the input data.
+	user := app.contextGetUser(r)
+
 	text := &data.Text{
 		Title:   input.Title,
 		Content: input.Content,
 		Format:  input.Format,
 		Expires: expires,
+		UserID:  user.ID,
 	}
+
+	// Add this logging
+	app.logger.PrintInfo("Attempting to insert text", map[string]string{
+		"title":   text.Title,
+		"userID":  fmt.Sprintf("%d", text.UserID),
+		"expires": text.Expires.String(),
+	})
 
 	// Initialize a new validator instance.
 	v := validator.New()
@@ -58,6 +67,7 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 	// Insert the text into the database.
 	err = app.models.Texts.Insert(text)
 	if err != nil {
+		app.logger.PrintError(err, nil)
 		app.serverErrorResponse(w, r, err)
 		return
 	}
