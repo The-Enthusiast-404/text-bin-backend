@@ -1,11 +1,13 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -25,15 +27,15 @@ func (app *application) readIDParam(r *http.Request) (string, error) {
 }
 
 func (app *application) readIntParam(r *http.Request, param string) (int64, error) {
-    params := httprouter.ParamsFromContext(r.Context())
-    id := params.ByName(param)
+	params := httprouter.ParamsFromContext(r.Context())
+	id := params.ByName(param)
 
-    idInt, err := strconv.ParseInt(id, 10, 64)
-    if err != nil || idInt < 1 {
-        return 0, fmt.Errorf("invalid %s parameter", param)
-    }
+	idInt, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || idInt < 1 {
+		return 0, fmt.Errorf("invalid %s parameter", param)
+	}
 
-    return idInt, nil
+	return idInt, nil
 }
 
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
@@ -147,4 +149,14 @@ func (app *application) background(fn func()) {
 		// Execute the arbitrary function that we passed as the parameter.
 		fn()
 	}()
+}
+
+func (app *application) generateSlug(title string, content string) string {
+	sanitized := strings.ToLower(strings.ReplaceAll(title, " ", "-"))
+	sanitized = regexp.MustCompile(`[^a-z0-9-]`).ReplaceAllString(sanitized, "")
+
+	hash := sha256.Sum256([]byte(content))
+	hashString := fmt.Sprintf("%x", hash)[:8] // Use first 8 characters of the hash
+
+	return fmt.Sprintf("%s-%s", sanitized, hashString)
 }

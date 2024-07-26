@@ -2,11 +2,11 @@ package data
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/validator"
@@ -25,7 +25,7 @@ type Text struct {
 	Slug       string    `json:"slug"`
 	LikesCount int       `json:"likes_count"`
 	Comments   []Comment `json:"comments,omitempty"`
-	UserID     int64     `json:"user_id,omitempty"`
+	UserID     *int64    `json:"user_id,omitempty"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -40,14 +40,14 @@ func ValidateText(v *validator.Validator, text *Text) {
 }
 
 // GenerateRandomCode generates a random string of specified length
-func GenerateRandomCode(n int) (string, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(b), nil
-}
+// func GenerateRandomCode(n int) (string, error) {
+// 	b := make([]byte, n)
+// 	_, err := rand.Read(b)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return base64.URLEncoding.EncodeToString(b), nil
+// }
 
 // Define a MovieModel struct type which wraps a sql.DB connection pool.
 type TextModel struct {
@@ -56,14 +56,14 @@ type TextModel struct {
 
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
-	query :=
-		`
+	query := `
         INSERT INTO texts (title, content, format, expires, slug, user_id)
         VALUES($1, $2, $3, $4, $5, $6)
         RETURNING id, created_at, version
-        `
+    `
 	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.UserID}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.ID, &text.CreatedAt, &text.Version)
@@ -73,12 +73,41 @@ func (m TextModel) Insert(text *Text) error {
 	return nil
 }
 
+func (m TextModel) GenerateUniqueSlug(title string) (string, error) {
+	baseSlug := strings.ToLower(strings.ReplaceAll(title, " ", "-"))
+	baseSlug = regexp.MustCompile(`[^a-z0-9-]`).ReplaceAllString(baseSlug, "")
+
+	for i := 0; i < 100; i++ { // Try up to 100 times
+		slug := baseSlug
+		if i > 0 {
+			slug = fmt.Sprintf("%s-%d", baseSlug, i)
+		}
+
+		exists, err := m.slugExists(slug)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return slug, nil
+		}
+	}
+
+	return "", errors.New("unable to generate unique slug")
+}
+
+func (m TextModel) slugExists(slug string) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM texts WHERE slug = $1)"
+	err := m.DB.QueryRow(query, slug).Scan(&exists)
+	return exists, err
+}
+
 // Get will return a specific record from the texts table based on the id
 func (m TextModel) Get(slug string) (*Text, error) {
 	query := `
-        SELECT t.id, t.created_at, t.title, t.content, t.format, t.expires, t.slug, t.version,
-               (SELECT COUNT(*) FROM likes WHERE text_id = t.id) as likes_count
-        FROM texts t
+        SELECT id, created_at, title, content, format, expires, slug, version, user_id,
+               (SELECT COUNT(*) FROM likes WHERE text_id = texts.id) as likes_count
+        FROM texts
         WHERE slug = $1`
 
 	var text Text
@@ -88,7 +117,7 @@ func (m TextModel) Get(slug string) (*Text, error) {
 
 	err := m.DB.QueryRowContext(ctx, query, slug).Scan(
 		&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format,
-		&text.Expires, &text.Slug, &text.Version, &text.LikesCount)
+		&text.Expires, &text.Slug, &text.Version, &text.UserID, &text.LikesCount)
 
 	if err != nil {
 		switch {
@@ -98,7 +127,6 @@ func (m TextModel) Get(slug string) (*Text, error) {
 			return nil, err
 		}
 	}
-
 	// Fetch comments
 	commentsQuery := `
         SELECT id, user_id, content, created_at, updated_at

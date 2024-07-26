@@ -45,8 +45,17 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 		Content: input.Content,
 		Format:  input.Format,
 		Expires: expires,
-		UserID:  user.ID,
 	}
+	if !user.IsAnonymous() {
+		text.UserID = &user.ID
+	}
+
+	slug, err := app.models.Texts.GenerateUniqueSlug(text.Title)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	text.Slug = slug
 
 	// Add this logging
 	app.logger.PrintInfo("Attempting to insert text", map[string]string{
