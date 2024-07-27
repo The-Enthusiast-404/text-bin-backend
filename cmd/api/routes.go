@@ -33,6 +33,11 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/users/authentication", app.createAuthenticationTokenHandler)
 
+	router.HandlerFunc(http.MethodPut, "/v1/users/password", app.updateUserPasswordHandler)
+
+	// Add the POST /v1/tokens/password-reset endpoint.
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/password-reset", app.createPasswordResetTokenHandler)
+
 	router.HandlerFunc(http.MethodPost, "/v1/texts/:id/like", app.addLikeHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/texts/:id/like", app.removeLikeHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/texts/:id/comments", app.addCommentHandler)
