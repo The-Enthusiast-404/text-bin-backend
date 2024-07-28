@@ -38,6 +38,15 @@ func (app *application) readIntParam(r *http.Request, param string) (int64, erro
 	return idInt, nil
 }
 
+func (app *application) readSlugParam(r *http.Request) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+	slug := params.ByName("slug")
+	if slug == "" {
+		return "", errors.New("invalid slug parameter")
+	}
+	return slug, nil
+}
+
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
 	// Encode the data to JSON, returning the error if there was one
 	js, err := json.Marshal(data)

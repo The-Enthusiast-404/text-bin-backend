@@ -1,0 +1,1 @@
+ALTER TABLE texts ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT false;

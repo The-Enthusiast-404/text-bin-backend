@@ -26,6 +26,7 @@ type Text struct {
 	LikesCount int       `json:"likes_count"`
 	Comments   []Comment `json:"comments,omitempty"`
 	UserID     *int64    `json:"user_id,omitempty"`
+	IsPrivate  bool      `json:"is_private"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -36,6 +37,7 @@ func ValidateText(v *validator.Validator, text *Text) {
 	v.Check(len(text.Content) <= 1000000, "content", "must not be more than 1000000 bytes long")
 	v.Check(text.Format != "", "format", "must be provided")
 	v.Check(text.Expires.After(time.Now()), "expires", "must be greater than the current time")
+	v.Check(text.UserID != nil || !text.IsPrivate, "is_private", "anonymous users cannot create private texts")
 
 }
 
@@ -57,11 +59,11 @@ type TextModel struct {
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
 	query := `
-        INSERT INTO texts (title, content, format, expires, slug, user_id)
-        VALUES($1, $2, $3, $4, $5, $6)
+        INSERT INTO texts (title, content, format, expires, slug, user_id, is_private)
+        VALUES($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, created_at, version
     `
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.UserID}
+	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.UserID, text.IsPrivate}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -103,9 +105,9 @@ func (m TextModel) slugExists(slug string) (bool, error) {
 }
 
 // Get will return a specific record from the texts table based on the id
-func (m TextModel) Get(slug string) (*Text, error) {
+func (m TextModel) Get(slug string, userID *int64) (*Text, error) {
 	query := `
-        SELECT id, created_at, title, content, format, expires, slug, version, user_id,
+        SELECT id, created_at, title, content, format, expires, slug, version, user_id, is_private,
                (SELECT COUNT(*) FROM likes WHERE text_id = texts.id) as likes_count
         FROM texts
         WHERE slug = $1`
@@ -117,7 +119,7 @@ func (m TextModel) Get(slug string) (*Text, error) {
 
 	err := m.DB.QueryRowContext(ctx, query, slug).Scan(
 		&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format,
-		&text.Expires, &text.Slug, &text.Version, &text.UserID, &text.LikesCount)
+		&text.Expires, &text.Slug, &text.Version, &text.UserID, &text.IsPrivate, &text.LikesCount)
 
 	if err != nil {
 		switch {
@@ -127,6 +129,12 @@ func (m TextModel) Get(slug string) (*Text, error) {
 			return nil, err
 		}
 	}
+
+	// Check if the text is private and the user is not the owner
+	if text.IsPrivate && (userID == nil || *userID != *text.UserID) {
+		return nil, ErrRecordNotFound
+	}
+
 	// Fetch comments
 	commentsQuery := `
         SELECT id, user_id, content, created_at, updated_at
@@ -157,17 +165,28 @@ func (m TextModel) Get(slug string) (*Text, error) {
 }
 
 // Update will update a specific record in the texts table based on the id
-func (m TextModel) Update(text *Text) error {
-	query :=
-		`
-		UPDATE texts
-		SET title = $1, content = $2, format = $3,expires = $4, version = version + 1
-		WHERE slug = $5 AND version = $6
-		RETURNING version
-	`
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.Version}
+// Update will update a specific record in the texts table based on the id
+func (m TextModel) Update(text *Text, userID int64) error {
+	query := `
+        UPDATE texts
+        SET title = $1, content = $2, format = $3, expires = $4, is_private = $5, version = version + 1
+        WHERE slug = $6 AND version = $7 AND (user_id = $8 OR user_id IS NULL)
+        RETURNING version
+    `
+	args := []interface{}{
+		text.Title,
+		text.Content,
+		text.Format,
+		text.Expires,
+		text.IsPrivate,
+		text.Slug,
+		text.Version,
+		userID,
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
+
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&text.Version)
 	if err != nil {
 		switch {
@@ -181,18 +200,19 @@ func (m TextModel) Update(text *Text) error {
 }
 
 // Delete will remove a specific record from the texts table based on the id
-func (m TextModel) Delete(id string) error {
-	if id == "" {
+// Delete will remove a specific record from the texts table based on the id
+func (m TextModel) Delete(slug string, userID int64) error {
+	if slug == "" {
 		return ErrRecordNotFound
 	}
-	query :=
-		`
-		DELETE FROM texts
-		WHERE slug = $1
-	`
+	query := `
+        DELETE FROM texts
+        WHERE slug = $1 AND (user_id = $2 OR user_id IS NULL)
+    `
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	result, err := m.DB.ExecContext(ctx, query, id)
+
+	result, err := m.DB.ExecContext(ctx, query, slug, userID)
 	if err != nil {
 		return err
 	}
