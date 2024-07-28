@@ -1,137 +1,104 @@
-# Text Bin API 🚀
+# TextBin 📝
 
-![Go](https://img.shields.io/badge/Go-1.20+-00ADD8?style=for-the-badge&logo=go)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-336791?style=for-the-badge&logo=postgresql)
+![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=for-the-badge&logo=postgresql)
 ![Docker](https://img.shields.io/badge/Docker-🐳-2496ED?style=for-the-badge&logo=docker)
 
-Text Bin API is a robust and scalable backend service for the Text Bin application, providing secure text storage, retrieval, and management functionalities.
+TextBin is a modern, feature-rich pastebin alternative built with Go. It allows users to easily share and manage text snippets with powerful functionality and a clean, intuitive API.
 
 ## 🌟 Features
 
-- 📊 RESTful API endpoints
+### Implemented ✅
+
 - 🔐 User authentication and authorization
-- 📝 CRUD operations for text snippets
-- ⏳ Text expiration management
-- 🔍 Advanced text search capabilities
-- 📊 Rate limiting and request throttling
+  - User registration and login
+  - JWT-based authentication
+- 📝 Text snippet management
+  - Create, read, update, and delete text snippets
+  - Support for public and private snippets
+- ⏳ Expiration settings for snippets
+- 🎨 Syntax highlighting support
+- 👍 Like system for snippets
+- 💬 Commenting system
 - 🔒 CORS support
+- 📊 Basic rate limiting
 
-## 🛠️ Technologies
+### Planned Enhancements 🚀
 
-- **Language:** Go 1.20+
-- **Web Framework:** Custom (using net/http)
-- **Database:** PostgreSQL 13+
-- **ORM:** Custom SQL with database/sql
+- 🔍 Full-text search capabilities
+- 📈 Advanced rate limiting and request throttling
+- 📨 Email notifications
+- 🔗 Sharing via short URLs
+- 📱 Mobile-friendly API endpoints
+- 🔄 Version history for snippets
+- 🏷️ Tagging system for better organization
+- 👥 User groups and collaboration features
+- 🔐 Two-factor authentication (2FA)
+- 📊 User dashboard with usage statistics
+- 🌐 Multi-language support
+- 🔌 API for third-party integrations
+
+## 🛠️ Technology Stack
+
+- **Backend:** Go 1.21+
+- **Database:** PostgreSQL 15+
 - **Authentication:** JWT
+- **API Documentation:** Swagger/OpenAPI (planned)
 - **Containerization:** Docker
-- **API Documentation:** Swagger/OpenAPI
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Go 1.20 or later
-- PostgreSQL 13 or later
-- Docker (optional)
+- Go 1.21 or later
+- PostgreSQL 15 or later
+- Docker (optional, for containerized deployment)
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/The-Enthusiast-404/text-bin-backend.git
-   cd text-bin-backend
+   git clone https://github.com/your-username/textbin.git
+   cd textbin
     ```
-2. Set up the database:
-```bash
-    psql -U postgres
-    CREATE DATABASE textbin;
-```
-3. Set up the environment variables:
-```bash
-DB_DSN=postgres://username:password@localhost/textbin?sslmode=disable
-```
-
-4. Run DB migrations:
-```bash
-go run ./cmd/migrate
-```
-
-5. Build and run the application
-```bash
-go build ./cmd/api
-./api
-```
-Certainly! Here's the backend README in markdown format:
-markdownCopy# Text Bin API 🚀
-
-![Go](https://img.shields.io/badge/Go-1.20+-00ADD8?style=for-the-badge&logo=go)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-336791?style=for-the-badge&logo=postgresql)
-![Docker](https://img.shields.io/badge/Docker-🐳-2496ED?style=for-the-badge&logo=docker)
-
-Text Bin API is a robust and scalable backend service for the Text Bin application, providing secure text storage, retrieval, and management functionalities.
-
-## 🌟 Features
-
-- 📊 RESTful API endpoints
-- 🔐 User authentication and authorization
-- 📝 CRUD operations for text snippets
-- ⏳ Text expiration management
-- 🔍 Advanced text search capabilities
-- 📊 Rate limiting and request throttling
-- 🔒 CORS support
-
-## 🛠️ Technologies
-
-- **Language:** Go 1.20+
-- **Web Framework:** Custom (using net/http)
-- **Database:** PostgreSQL 13+
-- **ORM:** Custom SQL with database/sql
-- **Authentication:** JWT
-- **Containerization:** Docker
-- **API Documentation:** Swagger/OpenAPI
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Go 1.20 or later
-- PostgreSQL 13 or later
-- Docker (optional)
-
-### Installation
-
-1. Clone the repository:
+2. Set up the PostgreSQL database:
    ```bash
-   git clone https://github.com/The-Enthusiast-404/text-bin-backend.git
-   cd text-bin-backend
-
-Set up the database:
-bashCopypsql -U postgres
-CREATE DATABASE textbin;
-
-Configure environment variables:
-Create a .env file in the root directory and add:
-CopyDB_DSN=postgres://username:password@localhost/textbin?sslmode=disable
-JWT_SECRET=your_jwt_secret_here
-
-Run database migrations:
-bashCopygo run ./cmd/migrate
-
-Build and run the application:
-bashCopygo build ./cmd/api
-./api
-
-
-
+   psql -U postgres -c "CREATE DATABASE textbin"
+   ```
+3. Copy the example environment file and configure the environment variables:
+   ```bash
+   DB_DSN=postgres://username:password@localhost/textbin?sslmode=disable
+   JWT_SECRET=your_jwt_secret_here
+   SMTP_HOST=smtp.example.com
+   SMTP_PORT=587
+   SMTP_USERNAME=your_username
+   SMTP_PASSWORD=your_password
+   SMTP_SENDER=TextBin <noreply@textbin.example.com>
+   ```
+4. Run db migrations:
+   ```bash
+   go run ./cmd/migrate
+   ```
+5. Start the server:
+   ```bash
+    go run ./cmd/api/main.go
+    ```
+6. Visit `http://localhost:4000/v1/healthcheck` in your browser to see the API status.
 
 ## 🤝 Contributing
-We welcome contributions! Please see our Contribution Guidelines for more information.
+
+We welcome contributions! Please see our Contribution Guidelines for more information on how to get started.
 
 ## 📄 License
+
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgements
 
 Go Programming Language
 PostgreSQL
-JWT
+JWT-Go
+
+## 📞 Support
+
+If you encounter any issues or have questions, please open an issue on our GitHub repository.
