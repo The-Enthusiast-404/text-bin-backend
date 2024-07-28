@@ -1,0 +1,1 @@
+ALTER TABLE texts DROP COLUMN IF EXISTS is_private;
