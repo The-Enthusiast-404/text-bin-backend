@@ -225,3 +225,53 @@ func (app *application) updateUserPasswordHandler(w http.ResponseWriter, r *http
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from the request context
+	user := app.contextGetUser(r)
+
+	// Check if the user is authenticated
+	if user.IsAnonymous() {
+		app.authenticationRequiredResponse(w, r)
+		return
+	}
+
+	// Get the user ID from the request parameters
+	userIDToDelete, err := app.readIntParam(r, "id")
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// Check if the authenticated user is trying to delete their own account
+	if user.ID != userIDToDelete {
+		app.notPermittedResponse(w, r)
+		return
+	}
+
+	// Proceed with account deletion
+	err = app.models.Users.DeleteUser(user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// Clear the authentication token cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Your account has been successfully deleted"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}

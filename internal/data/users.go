@@ -278,3 +278,24 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	}
 	return &user, nil
 }
+
+// DeleteUser deletes a user and all associated data
+func (m UserModel) DeleteUser(id int64) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := m.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+
+	return nil
+}
