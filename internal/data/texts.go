@@ -15,18 +15,19 @@ import (
 // Its important in Go to keep the Fields of a struct in Capotal letter to make it public
 // Any field that starts with a lowercase letter is private to the package and aren't  exported and won't be included when encoding a struct to JSON
 type Text struct {
-	ID         int64     `json:"id"`
-	CreatedAt  time.Time `json:"-"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	Format     string    `json:"format"`
-	Version    int32     `json:"version"`
-	Expires    time.Time `json:"expires"`
-	Slug       string    `json:"slug"`
-	LikesCount int       `json:"likes_count"`
-	Comments   []Comment `json:"comments,omitempty"`
-	UserID     *int64    `json:"user_id,omitempty"`
-	IsPrivate  bool      `json:"is_private"`
+	ID             int64     `json:"id"`
+	CreatedAt      time.Time `json:"-"`
+	Title          string    `json:"title"`
+	Content        string    `json:"content"`
+	Format         string    `json:"format"`
+	Expires        time.Time `json:"expires"`
+	Slug           string    `json:"slug"`
+	IsPrivate      bool      `json:"is_private"`
+	UserID         *int64    `json:"user_id,omitempty"`
+	LikesCount     int       `json:"likes_count"`
+	Comments       []Comment `json:"comments,omitempty"`
+	EncryptionSalt string    `json:"encryption_salt"`
+	Version        int32     `json:"-"`
 }
 
 // ValidateText will be used to validate the input data for the Text struct
@@ -59,12 +60,20 @@ type TextModel struct {
 // Insert will add a new record to the texts table
 func (m TextModel) Insert(text *Text) error {
 	query := `
-        INSERT INTO texts (title, content, format, expires, slug, user_id, is_private)
-        VALUES($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO texts (title, content, format, expires, slug, user_id, is_private, encryption_salt)
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, created_at, version
     `
-	args := []interface{}{text.Title, text.Content, text.Format, text.Expires, text.Slug, text.UserID, text.IsPrivate}
-
+	args := []interface{}{
+		text.Title,
+		text.Content,
+		text.Format,
+		text.Expires,
+		text.Slug,
+		text.UserID,
+		text.IsPrivate,
+		text.EncryptionSalt,
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -107,7 +116,7 @@ func (m TextModel) slugExists(slug string) (bool, error) {
 // Get will return a specific record from the texts table based on the id
 func (m TextModel) Get(slug string, userID *int64) (*Text, error) {
 	query := `
-        SELECT id, created_at, title, content, format, expires, slug, version, user_id, is_private,
+        SELECT id, created_at, title, content, format, expires, slug, version, user_id, is_private, encryption_salt,
                (SELECT COUNT(*) FROM likes WHERE text_id = texts.id) as likes_count
         FROM texts
         WHERE slug = $1`
@@ -119,7 +128,8 @@ func (m TextModel) Get(slug string, userID *int64) (*Text, error) {
 
 	err := m.DB.QueryRowContext(ctx, query, slug).Scan(
 		&text.ID, &text.CreatedAt, &text.Title, &text.Content, &text.Format,
-		&text.Expires, &text.Slug, &text.Version, &text.UserID, &text.IsPrivate, &text.LikesCount)
+		&text.Expires, &text.Slug, &text.Version, &text.UserID, &text.IsPrivate,
+		&text.EncryptionSalt, &text.LikesCount)
 
 	if err != nil {
 		switch {
@@ -169,8 +179,8 @@ func (m TextModel) Get(slug string, userID *int64) (*Text, error) {
 func (m TextModel) Update(text *Text, userID int64) error {
 	query := `
         UPDATE texts
-        SET title = $1, content = $2, format = $3, expires = $4, is_private = $5, version = version + 1
-        WHERE slug = $6 AND version = $7 AND (user_id = $8 OR user_id IS NULL)
+        SET title = $1, content = $2, format = $3, expires = $4, is_private = $5, encryption_salt = $6, version = version + 1
+        WHERE slug = $7 AND version = $8 AND (user_id = $9 OR user_id IS NULL)
         RETURNING version
     `
 	args := []interface{}{
@@ -179,6 +189,7 @@ func (m TextModel) Update(text *Text, userID int64) error {
 		text.Format,
 		text.Expires,
 		text.IsPrivate,
+		text.EncryptionSalt,
 		text.Slug,
 		text.Version,
 		userID,
