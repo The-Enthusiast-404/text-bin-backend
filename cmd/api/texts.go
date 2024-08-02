@@ -13,12 +13,13 @@ import (
 // createTextHandler will be used to create a text
 func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Title        string `json:"title"`
-		Content      string `json:"content"`
-		Format       string `json:"format"`
-		ExpiresValue int    `json:"expiresValue"`
-		ExpiresUnit  string `json:"expiresUnit"`
-		IsPrivate    bool   `json:"is_private"`
+		Title          string `json:"title"`
+		Content        string `json:"content"`
+		Format         string `json:"format"`
+		ExpiresValue   int    `json:"expiresValue"`
+		ExpiresUnit    string `json:"expiresUnit"`
+		IsPrivate      bool   `json:"is_private"`
+		EncryptionSalt string `json:"encryptionSalt"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -39,11 +40,12 @@ func (app *application) createTextHandler(w http.ResponseWriter, r *http.Request
 	user := app.contextGetUser(r)
 
 	text := &data.Text{
-		Title:     input.Title,
-		Content:   input.Content,
-		Format:    input.Format,
-		Expires:   expires,
-		IsPrivate: input.IsPrivate,
+		Title:          input.Title,
+		Content:        input.Content,
+		Format:         input.Format,
+		Expires:        expires,
+		IsPrivate:      input.IsPrivate,
+		EncryptionSalt: input.EncryptionSalt,
 	}
 	if !user.IsAnonymous() {
 		text.UserID = &user.ID
