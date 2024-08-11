@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"dev.theenthusiast.text-bin/internal/validator"
+	"golang.org/x/exp/rand"
 )
 
 // Its important in Go to keep the Fields of a struct in Capotal letter to make it public
@@ -84,14 +85,25 @@ func (m TextModel) Insert(text *Text) error {
 	return nil
 }
 
-func (m TextModel) GenerateUniqueSlug(title string) (string, error) {
-	baseSlug := strings.ToLower(strings.ReplaceAll(title, " ", "-"))
-	baseSlug = regexp.MustCompile(`[^a-z0-9-]`).ReplaceAllString(baseSlug, "")
+var randomSource rand.Source
+var randomGenerator *rand.Rand
 
-	for i := 0; i < 100; i++ { // Try up to 100 times
+func init() {
+	// Convert int64 to uint64 without losing information
+	seed := uint64(time.Now().UnixNano())
+	source := rand.NewSource(seed)
+	randomGenerator = rand.New(source)
+}
+
+func (m TextModel) GenerateUniqueSlug(title string) (string, error) {
+	baseSlug := generateBaseSlug(title)
+
+	for attempts := 0; attempts < 10; attempts++ {
 		slug := baseSlug
-		if i > 0 {
-			slug = fmt.Sprintf("%s-%d", baseSlug, i)
+		if attempts > 0 {
+			// Add a short random string instead of a number
+			randomStr := generateRandomString(3)
+			slug = fmt.Sprintf("%s-%s", baseSlug, randomStr)
 		}
 
 		exists, err := m.slugExists(slug)
@@ -103,9 +115,33 @@ func (m TextModel) GenerateUniqueSlug(title string) (string, error) {
 		}
 	}
 
-	return "", errors.New("unable to generate unique slug")
+	// If all attempts fail, generate a completely random slug
+	return generateRandomString(8), nil
 }
 
+func generateBaseSlug(title string) string {
+	title = strings.ToLower(title)
+	reg := regexp.MustCompile("[^a-z0-9]+")
+	title = reg.ReplaceAllString(title, " ")
+	words := strings.Fields(title)
+	if len(words) > 3 {
+		words = words[:3]
+	}
+	slug := strings.Join(words, "-")
+	if len(slug) > 20 {
+		slug = slug[:20]
+	}
+	return strings.TrimRight(slug, "-")
+}
+
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[randomGenerator.Intn(len(charset))]
+	}
+	return string(b)
+}
 func (m TextModel) slugExists(slug string) (bool, error) {
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM texts WHERE slug = $1)"
